@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.log
+*.db
+.env
+.venv
+.git
+.gitignore
+chroma_db/

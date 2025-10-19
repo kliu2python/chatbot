@@ -1,0 +1,14 @@
+services:
+  chatbot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATA_DIR=/data/docs
+      - DB_DIR=/data/chroma_db
+      - WATCH_DOCS=false
+    volumes:
+      - ./data:/data/docs:ro
+      - chroma_db:/data/chroma_db
+volumes:
+  chroma_db:
