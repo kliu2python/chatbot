@@ -61,6 +61,48 @@ function createCitationList(citations = []) {
     heading.textContent = 'Citations';
     sourceBlock.appendChild(heading);
 
+    const summaryRow = document.createElement('div');
+    summaryRow.className = 'message__sources-summary';
+
+    const summaryLabel = document.createElement('span');
+    summaryLabel.className = 'message__sources-summary-label';
+    summaryLabel.textContent = 'Quick view:';
+    summaryRow.appendChild(summaryLabel);
+
+    citations.forEach(citation => {
+        const labelText = citation.label || `[${citation.id}]`;
+        const badge = citation.url ? document.createElement('a') : document.createElement('span');
+        badge.className = 'message__citation-badge';
+        badge.textContent = labelText;
+
+        if (citation.url) {
+            badge.href = citation.url;
+            badge.target = '_blank';
+            badge.rel = 'noopener noreferrer';
+        }
+
+        const hoverDetails = [citation.title, citation.section].filter(Boolean).join(' · ');
+        if (hoverDetails) {
+            badge.title = hoverDetails;
+            badge.setAttribute('aria-label', `${labelText} – ${hoverDetails}`);
+        } else if (citation.title) {
+            badge.title = citation.title;
+            badge.setAttribute('aria-label', `${labelText} – ${citation.title}`);
+        }
+
+        summaryRow.appendChild(badge);
+    });
+
+    sourceBlock.appendChild(summaryRow);
+
+    const details = document.createElement('details');
+    details.className = 'message__sources-details';
+
+    const toggle = document.createElement('summary');
+    toggle.textContent = 'See citation details';
+    toggle.setAttribute('aria-label', 'Toggle citation details');
+    details.appendChild(toggle);
+
     const list = document.createElement('ul');
     list.className = 'message__sources-list';
 
@@ -109,7 +151,8 @@ function createCitationList(citations = []) {
         list.appendChild(item);
     });
 
-    sourceBlock.appendChild(list);
+    details.appendChild(list);
+    sourceBlock.appendChild(details);
     return sourceBlock;
 }
 
@@ -218,7 +261,7 @@ async function askQuestion(question) {
         renderHistory(data.history || []);
     } catch (error) {
         hideTypingIndicator();
-        appendMessage('Sorry, something went wrong contacting the assistant. Please try again.', 'bot');
+        appendMessage('Whoops—I had trouble reaching the service just now. Let’s try that again in a moment.', 'bot');
         console.error(error);
     } finally {
         if (sendButton) {
