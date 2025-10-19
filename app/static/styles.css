@@ -228,6 +228,76 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     padding: 0.65rem 0.75rem;
 }
 
+.message__sources-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.message__sources-summary-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.68rem;
+    color: rgba(226, 232, 240, 0.7);
+    margin-right: 0.25rem;
+}
+
+.message__citation-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.8rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(31, 111, 235, 0.15);
+    color: rgba(226, 232, 240, 0.85);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.message__citation-badge:hover,
+.message__citation-badge:focus {
+    background: rgba(31, 111, 235, 0.35);
+    color: #fff;
+}
+
+.message__sources-details {
+    margin-top: 0.25rem;
+}
+
+.message__sources-details summary {
+    cursor: pointer;
+    color: rgba(226, 232, 240, 0.75);
+    font-weight: 600;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.message__sources-details summary:hover,
+.message__sources-details summary:focus {
+    color: rgba(226, 232, 240, 0.95);
+}
+
+.message__sources-details summary::after {
+    content: '▾';
+    font-size: 0.65rem;
+    opacity: 0.8;
+}
+
+.message__sources-details[open] summary::after {
+    content: '▴';
+}
+
+.message__sources-details summary::-webkit-details-marker {
+    display: none;
+}
+
 .message__sources-heading {
     font-size: 0.7rem;
     text-transform: uppercase;

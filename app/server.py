@@ -528,8 +528,10 @@ def ask(body: AskBody):
 
     if not answer:
         note = (
-            "LLM not configured; returning retrieved passages only. Set OPENAI_API_KEY "
-            "(and optionally OPENAI_BASE_URL, OPENAI_MODEL)"
+            "Heads-up: I don’t have a language model connected right now, so I’m "
+            "sharing the most relevant passages I could find. If you set OPENAI_API_KEY "
+            "(and optionally OPENAI_BASE_URL, OPENAI_MODEL), I can draft full "
+            "responses for you."
         )
     else:
         note = ""
