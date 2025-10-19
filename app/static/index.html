@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FortiIdentity Cloud Support Chat</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <main class="page-wrapper">
+        <section class="intro">
+            <h1>FortiIdentity Cloud Support Assistant</h1>
+            <p>
+                Start a conversation with the FortiIdentity Cloud assistant to get guidance on
+                multi-factor authentication, directory integrations, and user lifecycle tasks.
+            </p>
+            <button class="open-chat" id="openChatFromIntro">Open Support Chat</button>
+        </section>
+    </main>
+
+    <button id="chatToggle" class="chat-toggle" aria-label="Open support chat">
+        <span class="chat-toggle__icon">💬</span>
+    </button>
+
+    <section id="chatWidget" class="chat-widget" aria-live="polite" aria-expanded="false">
+        <header class="chat-widget__header">
+            <div>
+                <h2>FortiIdentity Cloud Support</h2>
+                <p class="chat-widget__subtitle">Chat with the virtual support engineer</p>
+            </div>
+            <button id="closeChat" class="chat-widget__close" aria-label="Close chat">×</button>
+        </header>
+        <div id="chatMessages" class="chat-widget__messages"></div>
+        <form id="chatForm" class="chat-widget__form" autocomplete="off">
+            <label class="sr-only" for="chatInput">Type your question</label>
+            <textarea id="chatInput" class="chat-widget__input" rows="2" placeholder="Ask about MFA, user sources, or configuration..." required></textarea>
+            <div class="chat-widget__actions">
+                <button type="submit" id="sendButton" class="chat-widget__send">Send</button>
+            </div>
+        </form>
+    </section>
+
+    <script src="/static/chat.js" defer></script>
+</body>
+</html>
