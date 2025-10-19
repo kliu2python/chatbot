@@ -1,12 +1,15 @@
 import os
+import uuid
+from pathlib import Path
 from typing import List, Dict, Any
 
-from fastapi import FastAPI
-from fastapi import Query
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import chromadb
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
@@ -38,10 +41,23 @@ embedder = SentenceTransformer(EMBED_MODEL)
 
 app = FastAPI(title="Chroma FAQ Chatbot", version="1.0.0")
 
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def serve_index() -> FileResponse:
+    index_path = STATIC_DIR / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Chat UI not found")
+    return FileResponse(index_path)
+
 
 class AskBody(BaseModel):
     question: str
     top_k: int | None = None
+    session_id: str | None = None
 
 
 def embed(texts: List[str]) -> List[List[float]]:
@@ -59,9 +75,12 @@ def build_prompt(question: str, contexts: List[Dict[str, Any]]) -> str:
         numbered.append(f"[{i}] Source: {src}\n{snippet}")
     context_block = "\n\n".join(numbered)
 
-    prompt = f"""You are a helpful FAQ assistant.
-     Answer the user's question **only** using the CONTEXT.
-If the answer is not in the context, say you don't have enough information.
+    prompt = f"""You are Fortinet's FortiIdentity Cloud virtual support engineer.
+Your audience is a network or IT administrator who manages multi-factor authentication,
+directory integrations, and user lifecycle tasks for their company.
+
+Using only the numbered CONTEXT provided, craft a professional, technically precise response.
+If the necessary information is absent, state that additional FortiIdentity Cloud guidance is required.
 
 USER QUESTION:
 {question}
@@ -69,13 +88,13 @@ USER QUESTION:
 CONTEXT (numbered passages):
 {context_block}
 
-Instructions:
-- Be concise but complete.
-- If you use facts from a passage, cite like [1], [2] etc.
-- If multiple sources support the same point, cite both.
-- If you cannot find the answer, say so.
+Response expectations:
+- Provide structured guidance (bullets or short steps) tailored to FortiIdentity Cloud administrators.
+- Highlight configuration prerequisites, menu paths, or feature names exactly as they appear in the context.
+- Cite supporting passages using [n] references that match the numbered CONTEXT.
+- Maintain a confident, service-oriented tone, and never invent details that are not in the context.
 
-Now draft the best possible answer with citations.
+Deliver the final answer with citations.
 """
     return prompt
 
@@ -99,10 +118,27 @@ def health():
     return {"status": "ok", "db_dir": DB_DIR, "collection": COLLECTION}
 
 
+session_history: Dict[str, List[Dict[str, Any]]] = {}
+
+
 @app.post("/ask")
 def ask(body: AskBody):
     question = body.question.strip()
     top_k = body.top_k or TOP_K_DEFAULT
+    session_id = body.session_id or str(uuid.uuid4())
+
+    history = session_history.setdefault(session_id, [])
+
+    if not question:
+        return {
+            "question": question,
+            "answer": "",
+            "sources": [],
+            "note": "",
+            "session_id": session_id,
+            "history": history,
+        }
+
     q_emb = embed([question])[0]
 
     res = collection.query(
@@ -143,9 +179,19 @@ def ask(body: AskBody):
             "preview": (r["document"][:240] + "...") if len(r["document"]) > 240 else r["document"]
         })
 
+    history_entry = {
+        "question": question,
+        "answer": answer,
+        "note": note,
+        "sources": sources,
+    }
+    history.append(history_entry)
+
     return {
         "question": question,
         "answer": answer,
         "sources": sources,
         "note": note,
+        "session_id": session_id,
+        "history": history,
     }
