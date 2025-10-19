@@ -36,6 +36,28 @@ curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d
 
 If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval. Citations remain available for each chunk/web result even in retrieval-only mode.
 
+## Docker usage
+
+You can build and run the chatbot entirely from a container. The included `Dockerfile` and `docker-compose.yml` assume that your documentation lives in `./data` on the host and persists the vector store in a named volume so it survives restarts.
+
+```bash
+# Build the image
+docker compose build
+
+# (Optional) Ingest docs into the Chroma DB (omit --reset for incremental updates)
+docker compose run --rm ingest --reset
+
+# Start the API
+docker compose up
+
+# Query it
+curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d '{"question": "What is this project?"}' | jq
+```
+
+The Compose file mounts `./data` from the host into the container at `/data/docs` and stores embeddings in a persistent volume named `chroma_db`. Drop any Markdown, text, HTML, or PDF files into the local `./data` directory before running the ingestion command. Environment variables such as `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, or `ENABLE_WEB_SEARCH` can be added to the Compose file (under `environment:`) or passed via `docker compose run --rm -e VAR=value ingest --reset`. To rebuild embeddings after changing documentation, rerun the ingestion command with `--reset`.
+
+The auxiliary `ingest` service lives behind a Compose profile, so `docker compose up` only launches the API container. Run ingestion on demand with the `docker compose run` examples above.
+
 ## Embedding the FortiIdentity Cloud support widget elsewhere
 
 Once the FastAPI server is reachable from your FortiIdentity Cloud frontend, you can drop the floating chat experience into any page with a single script tag. The embed script injects the widget markup, loads the widget stylesheet, and wires the `/ask` endpoint with per-session history.

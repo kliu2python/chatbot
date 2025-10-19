@@ -1,0 +1,31 @@
+version: "3.9"
+
+x-shared-environment: &shared-environment
+  DATA_DIR: /data/docs
+  DB_DIR: /data/chroma_db
+  WATCH_DOCS: "false"
+
+x-shared-volumes: &shared-volumes
+  - ./data:/data/docs:ro
+  - chroma_db:/data/chroma_db
+
+services:
+  chatbot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *shared-environment
+    volumes: *shared-volumes
+
+  ingest:
+    build: .
+    profiles: ["ingest"]
+    environment:
+      <<: *shared-environment
+    working_dir: /app
+    command: ["python", "-m", "app.ingest", "--data_dir", "/data/docs", "--db_dir", "/data/chroma_db", "--collection", "faq"]
+    volumes: *shared-volumes
+
+volumes:
+  chroma_db:
