@@ -24,6 +24,7 @@ if (!chatWidget || !chatToggle || !closeChat || !chatForm || !chatInput || !chat
 
 const SESSION_KEY = globalConfig.sessionStorageKey || 'fortiidentity-chat-session-id';
 let sessionId = window.localStorage.getItem(SESSION_KEY);
+let typingIndicatorElement = null;
 
 if (!sessionId) {
     sessionId = crypto.randomUUID();
@@ -136,6 +137,45 @@ function appendMessage(content, type = 'bot', citations = []) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function showTypingIndicator() {
+    if (!chatMessages) {
+        return;
+    }
+
+    hideTypingIndicator();
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message message--bot message--typing';
+
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+
+    for (let i = 0; i < 3; i += 1) {
+        const dot = document.createElement('span');
+        dot.className = 'typing-indicator__dot';
+        indicator.appendChild(dot);
+    }
+
+    const srOnly = document.createElement('span');
+    srOnly.className = 'sr-only';
+    srOnly.textContent = 'Assistant is typing';
+    indicator.appendChild(srOnly);
+
+    wrapper.appendChild(indicator);
+    chatMessages.appendChild(wrapper);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    typingIndicatorElement = wrapper;
+}
+
+function hideTypingIndicator() {
+    if (typingIndicatorElement && typingIndicatorElement.parentNode) {
+        typingIndicatorElement.parentNode.removeChild(typingIndicatorElement);
+    }
+    typingIndicatorElement = null;
+}
+
 function renderHistory(history = []) {
     if (!chatMessages) {
         return;
@@ -155,6 +195,8 @@ async function askQuestion(question) {
         sendButton.textContent = 'Sending…';
     }
 
+    showTypingIndicator();
+
     try {
         const response = await fetch(ASK_ENDPOINT, {
             ...sharedFetchOptions,
@@ -172,8 +214,10 @@ async function askQuestion(question) {
             sessionId = data.session_id;
             window.localStorage.setItem(SESSION_KEY, sessionId);
         }
+        hideTypingIndicator();
         renderHistory(data.history || []);
     } catch (error) {
+        hideTypingIndicator();
         appendMessage('Sorry, something went wrong contacting the assistant. Please try again.', 'bot');
         console.error(error);
     } finally {
