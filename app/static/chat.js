@@ -47,7 +47,72 @@ function setWidgetOpen(isOpen) {
     }
 }
 
-function appendMessage(content, type = 'bot', sources = []) {
+function createCitationList(citations = []) {
+    if (!Array.isArray(citations) || citations.length === 0) {
+        return null;
+    }
+
+    const sourceBlock = document.createElement('div');
+    sourceBlock.className = 'message__sources';
+
+    const heading = document.createElement('div');
+    heading.className = 'message__sources-heading';
+    heading.textContent = 'Citations';
+    sourceBlock.appendChild(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'message__sources-list';
+
+    citations.forEach(citation => {
+        const item = document.createElement('li');
+        item.className = 'message__sources-item';
+
+        const label = document.createElement('span');
+        label.className = 'message__citation-label';
+        label.textContent = citation.label || `[${citation.id}]`;
+        item.appendChild(label);
+
+        const textWrapper = document.createElement('span');
+        textWrapper.className = 'message__citation-text';
+
+        const titleParts = [];
+        if (citation.title) {
+            titleParts.push(citation.title);
+        }
+        if (citation.section) {
+            titleParts.push(citation.section);
+        }
+        const linkText = titleParts.join(' · ') || 'Source';
+
+        if (citation.url) {
+            const link = document.createElement('a');
+            link.href = citation.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = linkText;
+            textWrapper.appendChild(link);
+        } else {
+            const span = document.createElement('span');
+            span.textContent = linkText;
+            textWrapper.appendChild(span);
+        }
+
+        if (citation.preview) {
+            const preview = document.createElement('span');
+            preview.className = 'message__citation-preview';
+            preview.textContent = ` — ${citation.preview}`;
+            textWrapper.appendChild(preview);
+        }
+
+        item.appendChild(textWrapper);
+        list.appendChild(item);
+    });
+
+    sourceBlock.appendChild(list);
+    return sourceBlock;
+}
+
+function appendMessage(content, type = 'bot', citations = []) {
     const wrapper = document.createElement('div');
     wrapper.className = `message message--${type}`;
 
@@ -56,11 +121,11 @@ function appendMessage(content, type = 'bot', sources = []) {
     messageContent.innerHTML = content;
     wrapper.appendChild(messageContent);
 
-    if (type === 'bot' && sources.length > 0) {
-        const sourceBlock = document.createElement('div');
-        sourceBlock.className = 'message__sources';
-        sourceBlock.textContent = `Sources: ${sources.map(src => `[#${src.id} ${src.source || 'context'}]`).join(' ')}`;
-        wrapper.appendChild(sourceBlock);
+    if (type === 'bot') {
+        const citationList = createCitationList(citations);
+        if (citationList) {
+            wrapper.appendChild(citationList);
+        }
     }
 
     if (!chatMessages) {
@@ -80,7 +145,7 @@ function renderHistory(history = []) {
     history.forEach(entry => {
         appendMessage(entry.question, 'user');
         const responseText = entry.answer || entry.note || 'No response available.';
-        appendMessage(responseText.replace(/\n/g, '<br/>'), 'bot', entry.sources || []);
+        appendMessage(responseText.replace(/\n/g, '<br/>'), 'bot', entry.citations || entry.sources || []);
     });
 }
 
@@ -158,11 +223,6 @@ if (openChatFromIntro) {
             const data = await response.json();
             if ((data.history || []).length > 0) {
                 renderHistory(data.history);
-            } else {
-                // Remove placeholder append from empty question if backend returns entry
-                if (Array.isArray(data.history) && data.history.length === 0) {
-                    chatMessages.innerHTML = '';
-                }
             }
         }
     } catch (error) {

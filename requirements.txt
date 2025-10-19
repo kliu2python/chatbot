@@ -6,3 +6,8 @@ fastapi
 uvicorn
 python-dotenv
 openai
+langchain
+langchain-community
+langgraph
+duckduckgo-search
+watchdog
