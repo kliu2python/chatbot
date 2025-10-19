@@ -44,10 +44,8 @@ You can build and run the chatbot entirely from a container. The included `Docke
 # Build the image
 docker compose build
 
-# (Optional) Ingest docs into the Chroma DB
-docker compose run --rm \
-  chatbot \
-  python -m app.ingest --data_dir /data/docs --db_dir /data/chroma_db --collection faq --reset
+# (Optional) Ingest docs into the Chroma DB (omit --reset for incremental updates)
+docker compose run --rm ingest --reset
 
 # Start the API
 docker compose up
@@ -56,7 +54,9 @@ docker compose up
 curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d '{"question": "What is this project?"}' | jq
 ```
 
-Environment variables such as `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, or `ENABLE_WEB_SEARCH` can be added to the `docker-compose.yml` file (under `environment:`) or passed via `docker compose run ... -e VAR=value` when ingesting. To rebuild embeddings after changing documentation, rerun the ingestion command above.
+The Compose file mounts `./data` from the host into the container at `/data/docs` and stores embeddings in a persistent volume named `chroma_db`. Drop any Markdown, text, HTML, or PDF files into the local `./data` directory before running the ingestion command. Environment variables such as `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, or `ENABLE_WEB_SEARCH` can be added to the Compose file (under `environment:`) or passed via `docker compose run --rm -e VAR=value ingest --reset`. To rebuild embeddings after changing documentation, rerun the ingestion command with `--reset`.
+
+The auxiliary `ingest` service lives behind a Compose profile, so `docker compose up` only launches the API container. Run ingestion on demand with the `docker compose run` examples above.
 
 ## Embedding the FortiIdentity Cloud support widget elsewhere
 
