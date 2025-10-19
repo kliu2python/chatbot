@@ -5,6 +5,10 @@ This is a **tiny, production-friendly starter** for building an FAQ chatbot usin
 - **Sentence-Transformers** for local embeddings (no external API required)
 - **FastAPI** for a simple `/ask` endpoint
 - Optional **OpenAI-compatible** LLM (works with OpenAI or a LiteLLM proxy via `OPENAI_BASE_URL`)
+- **Cross-encoder reranking** (`cross-encoder/ms-marco-MiniLM-L-12-v2` by default) for high-quality context ordering
+- **LangGraph + LangChain** orchestration that blends Chroma retrieval with optional DuckDuckGo web search results
+- **Structured citations** that surface titles, sections, and URLs directly in the chat widget
+- **Automatic document watches** (via `watchdog`) to reingest updated content without restarting the API
 
 ## Quickstart
 
@@ -16,8 +20,8 @@ pip install -r requirements.txt
 # 2) Put your docs into ./data (pdf, txt, md, html supported in this demo)
 #    A sample doc already exists.
 
-# 3) Build the vector DB
-python -m app.ingest --data_dir ./data --db_dir ./chroma_db --collection faq
+# 3) Build the vector DB (pass --reset to rebuild from scratch)
+python -m app.ingest --data_dir ./data --db_dir ./chroma_db --collection faq --reset
 
 # 4) Run the API
 # Optional env (works with OpenAI or LiteLLM):
@@ -30,7 +34,7 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d '{"question": "What is this project?"}' | jq
 ```
 
-If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval.
+If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval. Citations remain available for each chunk/web result even in retrieval-only mode.
 
 ## Embedding the FortiIdentity Cloud support widget elsewhere
 
@@ -55,7 +59,10 @@ The script waits for `DOMContentLoaded`, injects the floating launcher button, a
 
 ## Tuning knobs
 - **Chunk size / overlap** in `app/ingest.py` (`CHUNK_CHARS`, `CHUNK_OVERLAP`)
-- **Top-K** results in `/ask` body (`top_k`, default 5)
+- **Top-K** results in `/ask` body (`top_k`, default 5) – reranking automatically evaluates the top 20 candidates
+- **Cross-encoder model** via `RERANK_MODEL`
+- **Web search fan-out** with `ENABLE_WEB_SEARCH=true`/`false` and `WEB_SEARCH_K`
+- **Automatic watches** toggle with `WATCH_DOCS=true`/`false` and debounce via `REINGEST_DEBOUNCE`
 - **Metadata** you store with each chunk (`source`, `title`, `url`, etc.)
 
 ## Folder layout
@@ -69,11 +76,5 @@ chroma_faq_bot/
   requirements.txt
   README.md
 ```
-
-## Next steps (nice upgrades)
-- Add a **cross-encoder reranker** (e.g., `ms-marco-MiniLM-L-12-v2`) on the top 20 retrieved chunks for higher-quality answers.
-- Add **citation formatting** per source URL/section and render in your UI.
-- Add **document watches** to auto-reingest updated docs.
-- Use **LangGraph / LangChain** to wire multi-step tools (e.g., web search + Chroma).
 
 Enjoy!

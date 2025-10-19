@@ -89,12 +89,16 @@ def iter_docs(data_dir: Path) -> Iterable[Tuple[str, Dict]]:
         if not text:
             continue
         chunks = chunk_text(text)
+        last_modified = path.stat().st_mtime
         for i, chunk in enumerate(chunks):
             meta = {
                 "source": str(path.resolve()),
                 "chunk": i,
                 "total_chunks": len(chunks),
                 "filename": path.name,
+                "last_modified": last_modified,
+                "section_label": f"Section {i + 1} of {len(chunks)}",
+                "url": str(path.resolve()),
             }
             yield chunk, meta
 
@@ -109,8 +113,11 @@ def upsert_chunks(
     docs: Iterable[Tuple[str, Dict]],
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     batch_size: int = 128,
+    reset: bool = False,
 ):
     collection = client.get_or_create_collection(name=collection_name, metadata={"hnsw:space": "cosine"})
+    if reset:
+        collection.delete()
     embedder = SentenceTransformer(model_name)
 
     batch_texts, batch_metas, batch_ids = [], [], []
@@ -129,8 +136,8 @@ def upsert_chunks(
         batch_texts, batch_metas, batch_ids = [], [], []
 
     for text, meta in docs:
-        # Deterministic ID by content + source + chunk index
-        content_id = sha1(meta["source"] + "::" + str(meta["chunk"]) + "::" + sha1(text))
+        # Deterministic ID by source + chunk index ensures updates overwrite
+        content_id = sha1(meta["source"] + "::" + str(meta["chunk"]))
         batch_texts.append(text)
         batch_metas.append(meta)
         batch_ids.append(content_id)
@@ -147,6 +154,7 @@ def main():
     parser.add_argument("--db_dir", type=str, default="./chroma_db", help="Directory for Chroma persistence")
     parser.add_argument("--collection", type=str, default="faq", help="Collection name")
     parser.add_argument("--model", type=str, default="sentence-transformers/all-MiniLM-L6-v2", help="Embedding model")
+    parser.add_argument("--reset", action="store_true", help="Reset the collection before ingesting")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -156,7 +164,7 @@ def main():
     client = chromadb.PersistentClient(path=args.db_dir)
     docs = iter_docs(data_dir)
 
-    upsert_chunks(client, args.collection, docs, model_name=args.model)
+    upsert_chunks(client, args.collection, docs, model_name=args.model, reset=args.reset)
     print(f"Ingest complete. DB path: {args.db_dir}, collection: {args.collection}")
 
 

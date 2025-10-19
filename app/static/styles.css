@@ -180,6 +180,61 @@ body.fortiidentity-chat-standalone .open-chat:hover,
 .message__sources {
     font-size: 0.75rem;
     color: rgba(148, 163, 184, 0.8);
+    background: rgba(13, 17, 23, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 12px;
+    padding: 0.65rem 0.75rem;
+}
+
+.message__sources-heading {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(226, 232, 240, 0.7);
+    margin-bottom: 0.35rem;
+}
+
+.message__sources-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.message__sources-item {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-start;
+}
+
+.message__citation-label {
+    font-weight: 600;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.message__citation-text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    color: rgba(148, 163, 184, 0.85);
+}
+
+.message__citation-text a {
+    color: rgba(148, 163, 184, 0.95);
+    text-decoration: underline;
+}
+
+.message__citation-text a:hover,
+.message__citation-text a:focus {
+    color: var(--primary);
+}
+
+.message__citation-preview {
+    font-style: italic;
+    color: rgba(148, 163, 184, 0.7);
 }
 
 .chat-widget__form {
