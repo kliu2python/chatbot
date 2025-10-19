@@ -36,6 +36,28 @@ curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d
 
 If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval. Citations remain available for each chunk/web result even in retrieval-only mode.
 
+## Docker usage
+
+You can build and run the chatbot entirely from a container. The included `Dockerfile` and `docker-compose.yml` assume that your documentation lives in `./data` on the host and persists the vector store in a named volume so it survives restarts.
+
+```bash
+# Build the image
+docker compose build
+
+# (Optional) Ingest docs into the Chroma DB
+docker compose run --rm \
+  chatbot \
+  python -m app.ingest --data_dir /data/docs --db_dir /data/chroma_db --collection faq --reset
+
+# Start the API
+docker compose up
+
+# Query it
+curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d '{"question": "What is this project?"}' | jq
+```
+
+Environment variables such as `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`, or `ENABLE_WEB_SEARCH` can be added to the `docker-compose.yml` file (under `environment:`) or passed via `docker compose run ... -e VAR=value` when ingesting. To rebuild embeddings after changing documentation, rerun the ingestion command above.
+
 ## Embedding the FortiIdentity Cloud support widget elsewhere
 
 Once the FastAPI server is reachable from your FortiIdentity Cloud frontend, you can drop the floating chat experience into any page with a single script tag. The embed script injects the widget markup, loads the widget stylesheet, and wires the `/ask` endpoint with per-session history.
