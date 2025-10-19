@@ -1,3 +1,14 @@
+const globalConfig = window.FortiIdentityChatConfig || {};
+const configuredBaseUrl = (globalConfig.baseUrl || '').replace(/\/$/, '');
+const ASK_ENDPOINT = configuredBaseUrl ? `${configuredBaseUrl}/ask` : '/ask';
+const baseFetchOptions = globalConfig.fetchOptions || {};
+const baseHeaders = {
+    'Content-Type': 'application/json',
+    ...(baseFetchOptions.headers || {})
+};
+const sharedFetchOptions = { ...baseFetchOptions };
+delete sharedFetchOptions.headers;
+
 const chatWidget = document.getElementById('chatWidget');
 const chatToggle = document.getElementById('chatToggle');
 const closeChat = document.getElementById('closeChat');
@@ -7,7 +18,11 @@ const chatMessages = document.getElementById('chatMessages');
 const sendButton = document.getElementById('sendButton');
 const openChatFromIntro = document.getElementById('openChatFromIntro');
 
-const SESSION_KEY = 'fortiidentity-chat-session-id';
+if (!chatWidget || !chatToggle || !closeChat || !chatForm || !chatInput || !chatMessages || !sendButton) {
+    console.error('FortiIdentity chat widget markup is missing required elements.');
+}
+
+const SESSION_KEY = globalConfig.sessionStorageKey || 'fortiidentity-chat-session-id';
 let sessionId = window.localStorage.getItem(SESSION_KEY);
 
 if (!sessionId) {
@@ -16,10 +31,16 @@ if (!sessionId) {
 }
 
 function setWidgetOpen(isOpen) {
+    if (!chatWidget) {
+        return;
+    }
+
     if (isOpen) {
         chatWidget.classList.add('chat-widget--open');
         chatWidget.setAttribute('aria-expanded', 'true');
-        chatInput.focus();
+        if (chatInput) {
+            chatInput.focus();
+        }
     } else {
         chatWidget.classList.remove('chat-widget--open');
         chatWidget.setAttribute('aria-expanded', 'false');
@@ -42,11 +63,19 @@ function appendMessage(content, type = 'bot', sources = []) {
         wrapper.appendChild(sourceBlock);
     }
 
+    if (!chatMessages) {
+        return;
+    }
+
     chatMessages.appendChild(wrapper);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function renderHistory(history = []) {
+    if (!chatMessages) {
+        return;
+    }
+
     chatMessages.innerHTML = '';
     history.forEach(entry => {
         appendMessage(entry.question, 'user');
@@ -56,13 +85,16 @@ function renderHistory(history = []) {
 }
 
 async function askQuestion(question) {
-    sendButton.disabled = true;
-    sendButton.textContent = 'Sending…';
+    if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.textContent = 'Sending…';
+    }
 
     try {
-        const response = await fetch('/ask', {
+        const response = await fetch(ASK_ENDPOINT, {
+            ...sharedFetchOptions,
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: baseHeaders,
             body: JSON.stringify({ question, session_id: sessionId })
         });
 
@@ -80,33 +112,46 @@ async function askQuestion(question) {
         appendMessage('Sorry, something went wrong contacting the assistant. Please try again.', 'bot');
         console.error(error);
     } finally {
-        sendButton.disabled = false;
-        sendButton.textContent = 'Send';
+        if (sendButton) {
+            sendButton.disabled = false;
+            sendButton.textContent = 'Send';
+        }
     }
 }
 
-chatForm.addEventListener('submit', event => {
-    event.preventDefault();
-    const question = chatInput.value.trim();
-    if (!question) {
-        return;
-    }
+if (chatForm && chatInput) {
+    chatForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const question = chatInput.value.trim();
+        if (!question) {
+            return;
+        }
 
-    appendMessage(question, 'user');
-    chatInput.value = '';
-    askQuestion(question);
-});
+        appendMessage(question, 'user');
+        chatInput.value = '';
+        askQuestion(question);
+    });
+}
 
-chatToggle.addEventListener('click', () => setWidgetOpen(!chatWidget.classList.contains('chat-widget--open')));
-closeChat.addEventListener('click', () => setWidgetOpen(false));
-openChatFromIntro.addEventListener('click', () => setWidgetOpen(true));
+if (chatToggle && chatWidget) {
+    chatToggle.addEventListener('click', () => setWidgetOpen(!chatWidget.classList.contains('chat-widget--open')));
+}
+
+if (closeChat) {
+    closeChat.addEventListener('click', () => setWidgetOpen(false));
+}
+
+if (openChatFromIntro) {
+    openChatFromIntro.addEventListener('click', () => setWidgetOpen(true));
+}
 
 // Load existing history when the page loads
 (async () => {
     try {
-        const response = await fetch('/ask', {
+        const response = await fetch(ASK_ENDPOINT, {
+            ...sharedFetchOptions,
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: baseHeaders,
             body: JSON.stringify({ question: '', session_id: sessionId, top_k: 1 })
         });
         if (response.ok) {

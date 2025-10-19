@@ -11,7 +11,7 @@
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-body {
+body.fortiidentity-chat-standalone {
     margin: 0;
     min-height: 100vh;
     background: linear-gradient(135deg, #0d1b2a, #1b263b);
@@ -21,13 +21,13 @@ body {
     justify-content: center;
 }
 
-.page-wrapper {
+body.fortiidentity-chat-standalone .page-wrapper {
     width: 100%;
     max-width: 960px;
     padding: 3rem 1.5rem;
 }
 
-.intro {
+body.fortiidentity-chat-standalone .intro {
     background: rgba(15, 23, 42, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
@@ -36,19 +36,19 @@ body {
     backdrop-filter: blur(12px);
 }
 
-.intro h1 {
+body.fortiidentity-chat-standalone .intro h1 {
     font-size: 2.5rem;
     margin-top: 0;
     margin-bottom: 1rem;
 }
 
-.intro p {
+body.fortiidentity-chat-standalone .intro p {
     font-size: 1.1rem;
     line-height: 1.6;
     color: rgba(226, 232, 240, 0.85);
 }
 
-.open-chat {
+body.fortiidentity-chat-standalone .open-chat {
     margin-top: 2rem;
     padding: 0.85rem 1.75rem;
     font-size: 1rem;
@@ -62,7 +62,7 @@ body {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.open-chat:hover,
+body.fortiidentity-chat-standalone .open-chat:hover,
 .chat-widget__send:hover {
     transform: translateY(-1px);
     box-shadow: 0 14px 30px rgba(31, 111, 235, 0.35);
@@ -237,11 +237,11 @@ body {
 }
 
 @media (max-width: 600px) {
-    body {
+    body.fortiidentity-chat-standalone {
         align-items: flex-start;
     }
 
-    .intro {
+    body.fortiidentity-chat-standalone .intro {
         padding: 1.75rem;
     }
 

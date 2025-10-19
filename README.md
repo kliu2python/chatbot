@@ -32,6 +32,27 @@ curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d
 
 If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval.
 
+## Embedding the FortiIdentity Cloud support widget elsewhere
+
+Once the FastAPI server is reachable from your FortiIdentity Cloud frontend, you can drop the floating chat experience into any page with a single script tag. The embed script injects the widget markup, loads the widget stylesheet, and wires the `/ask` endpoint with per-session history.
+
+```html
+<script
+  src="https://YOUR_CHATBOT_HOST/static/embed.js"
+  data-base-url="https://YOUR_CHATBOT_HOST"
+  data-with-credentials="false"
+  defer
+></script>
+```
+
+**Options**
+
+- `data-base-url` (recommended): explicitly points the widget to the FastAPI host that serves `/ask` and the static assets. If the script is loaded from the same origin as your API, you can omit it.
+- `data-with-credentials="true"`: include cookies when calling `/ask` if your deployment relies on browser-based auth. Defaults to `false`.
+- `data-session-key`: override the localStorage key used for chat sessions when embedding the widget on multiple sites.
+
+The script waits for `DOMContentLoaded`, injects the floating launcher button, and reuses the existing FortiIdentity styling without altering the host page layout.
+
 ## Tuning knobs
 - **Chunk size / overlap** in `app/ingest.py` (`CHUNK_CHARS`, `CHUNK_OVERLAP`)
 - **Top-K** results in `/ask` body (`top_k`, default 5)
