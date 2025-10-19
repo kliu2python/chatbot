@@ -87,6 +87,11 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     z-index: 1000;
 }
 
+.chat-widget,
+.chat-widget * {
+    box-sizing: border-box;
+}
+
 .chat-widget {
     position: fixed;
     right: 24px;
