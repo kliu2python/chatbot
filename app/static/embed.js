@@ -48,7 +48,11 @@
         wrapper.setAttribute('data-fortiidentity-chat', 'root');
         wrapper.innerHTML = `
             <button id="chatToggle" class="chat-toggle" aria-label="Open support chat">
-                <span class="chat-toggle__icon">💬</span>
+                <span class="chat-toggle__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" role="img">
+                        <path d="M4 4.75C4 3.784 4.784 3 5.75 3h12.5C19.216 3 20 3.784 20 4.75v8.5c0 .966-.784 1.75-1.75 1.75H8.59l-3.142 2.514A.75.75 0 0 1 4 17.95zm1.75-.25a.25.25 0 0 0-.25.25v12.105l2.59-2.072a.75.75 0 0 1 .467-.163h10.693a.25.25 0 0 0 .25-.25v-9.62a.25.25 0 0 0-.25-.25z" />
+                    </svg>
+                </span>
             </button>
             <section id="chatWidget" class="chat-widget" aria-live="polite" aria-expanded="false">
                 <header class="chat-widget__header">
