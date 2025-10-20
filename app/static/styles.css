@@ -110,6 +110,21 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     z-index: 1000;
 }
 
+.fortiidentity-chat .chat-toggle__icon,
+body.fortiidentity-chat-standalone .chat-toggle__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fortiidentity-chat .chat-toggle__icon svg,
+body.fortiidentity-chat-standalone .chat-toggle__icon svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+    fill: currentColor;
+}
+
 .fortiidentity-chat .chat-widget,
 .fortiidentity-chat .chat-widget * {
     box-sizing: border-box;
