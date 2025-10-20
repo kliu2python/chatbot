@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 import chromadb
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from langchain_community.tools import DuckDuckGoSearchResults
@@ -85,6 +86,33 @@ except Exception as exc:  # pragma: no cover - optional dependency failure
     duckduckgo_tool = None
 
 app = FastAPI(title="Chroma FAQ Chatbot", version="1.1.0")
+
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+if not cors_origins:
+    cors_origins = ["*"]
+allow_credentials = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+
+if allow_credentials and "*" in cors_origins:
+    cors_origins = [origin for origin in cors_origins if origin != "*"]
+    if not cors_origins:
+        logger.warning(
+            "CORS_ALLOW_CREDENTIALS enabled without explicit origins;"
+            " defaulting to wildcard origins with credentials disabled."
+        )
+        allow_credentials = False
+        cors_origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
