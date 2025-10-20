@@ -10,17 +10,14 @@ const sharedFetchOptions = { ...baseFetchOptions };
 delete sharedFetchOptions.headers;
 
 const chatRoot = document.querySelector('[data-fortiidentity-chat="root"]');
-const queryElement = selector =>
-    (chatRoot && chatRoot.querySelector(selector)) || document.querySelector(selector);
-
-const chatWidget = queryElement('#chatWidget');
-const chatToggle = queryElement('#chatToggle');
-const closeChat = queryElement('#closeChat');
-const chatForm = queryElement('#chatForm');
-const chatInput = queryElement('#chatInput');
-const chatMessages = queryElement('#chatMessages');
-const sendButton = queryElement('#sendButton');
-const openChatFromIntro = queryElement('#openChatFromIntro');
+const chatWidget = chatRoot ? chatRoot.querySelector('#chatWidget') : null;
+const chatToggle = chatRoot ? chatRoot.querySelector('#chatToggle') : null;
+const closeChat = chatRoot ? chatRoot.querySelector('#closeChat') : null;
+const chatForm = chatRoot ? chatRoot.querySelector('#chatForm') : null;
+const chatInput = chatRoot ? chatRoot.querySelector('#chatInput') : null;
+const chatMessages = chatRoot ? chatRoot.querySelector('#chatMessages') : null;
+const sendButton = chatRoot ? chatRoot.querySelector('#sendButton') : null;
+const openChatFromIntro = chatRoot ? chatRoot.querySelector('#openChatFromIntro') : null;
 
 if (!chatWidget || !chatToggle || !closeChat || !chatForm || !chatInput || !chatMessages || !sendButton) {
     console.error('FortiIdentity chat widget markup is missing required elements.');
