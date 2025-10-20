@@ -39,11 +39,13 @@
     }
 
     function injectMarkup() {
-        if (document.getElementById('chatWidget')) {
+        if (document.querySelector('[data-fortiidentity-chat="root"]')) {
             return;
         }
 
         const wrapper = document.createElement('div');
+        wrapper.className = 'fortiidentity-chat';
+        wrapper.setAttribute('data-fortiidentity-chat', 'root');
         wrapper.innerHTML = `
             <button id="chatToggle" class="chat-toggle" aria-label="Open support chat">
                 <span class="chat-toggle__icon">💬</span>

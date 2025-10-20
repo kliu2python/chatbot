@@ -1,4 +1,4 @@
-:root {
+.fortiidentity-chat {
     color-scheme: light dark;
     --primary: #1f6feb;
     --primary-dark: #144ea6;
@@ -9,6 +9,29 @@
     --text: #1f2933;
     --text-light: #e5e7eb;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    position: relative;
+    z-index: 999;
+}
+
+.fortiidentity-chat * {
+    font-family: inherit;
+}
+
+body.fortiidentity-chat-standalone {
+    color-scheme: light dark;
+    --primary: #1f6feb;
+    --primary-dark: #144ea6;
+    --surface: #0d1117;
+    --surface-light: #ffffff;
+    --border: rgba(31, 111, 235, 0.25);
+    --shadow: rgba(15, 23, 42, 0.15);
+    --text: #1f2933;
+    --text-light: #e5e7eb;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body.fortiidentity-chat-standalone * {
+    font-family: inherit;
 }
 
 body.fortiidentity-chat-standalone {
@@ -63,12 +86,12 @@ body.fortiidentity-chat-standalone .open-chat {
 }
 
 body.fortiidentity-chat-standalone .open-chat:hover,
-.chat-widget__send:hover {
+.fortiidentity-chat .chat-widget__send:hover {
     transform: translateY(-1px);
     box-shadow: 0 14px 30px rgba(31, 111, 235, 0.35);
 }
 
-.chat-toggle {
+.fortiidentity-chat .chat-toggle {
     position: fixed;
     right: 24px;
     bottom: 24px;
@@ -87,12 +110,12 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     z-index: 1000;
 }
 
-.chat-widget,
-.chat-widget * {
+.fortiidentity-chat .chat-widget,
+.fortiidentity-chat .chat-widget * {
     box-sizing: border-box;
 }
 
-.chat-widget {
+.fortiidentity-chat .chat-widget {
     position: fixed;
     right: 24px;
     bottom: 96px;
@@ -113,13 +136,13 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     z-index: 1100;
 }
 
-.chat-widget--open {
+.fortiidentity-chat .chat-widget--open {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
 }
 
-.chat-widget__header {
+.fortiidentity-chat .chat-widget__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -128,19 +151,19 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.chat-widget__header h2 {
+.fortiidentity-chat .chat-widget__header h2 {
     margin: 0;
     font-size: 1.1rem;
     color: #fff;
 }
 
-.chat-widget__subtitle {
+.fortiidentity-chat .chat-widget__subtitle {
     margin: 0.35rem 0 0;
     font-size: 0.85rem;
     color: rgba(226, 232, 240, 0.75);
 }
 
-.chat-widget__close {
+.fortiidentity-chat .chat-widget__close {
     border: none;
     background: transparent;
     color: rgba(226, 232, 240, 0.85);
@@ -149,7 +172,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     line-height: 1;
 }
 
-.chat-widget__messages {
+.fortiidentity-chat .chat-widget__messages {
     padding: 1.25rem;
     overflow-y: auto;
     flex: 1;
@@ -158,7 +181,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     gap: 0.85rem;
 }
 
-.message {
+.fortiidentity-chat .message {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
@@ -169,30 +192,30 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     line-height: 1.5;
 }
 
-.message--user {
+.fortiidentity-chat .message--user {
     align-self: flex-end;
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: #fff;
 }
 
-.message--bot {
+.fortiidentity-chat .message--bot {
     align-self: flex-start;
     background: rgba(15, 23, 42, 0.85);
     color: rgba(226, 232, 240, 0.92);
     border: 1px solid rgba(148, 163, 184, 0.15);
 }
 
-.message--typing {
+.fortiidentity-chat .message--typing {
     padding: 0.85rem 1rem;
 }
 
-.typing-indicator {
+.fortiidentity-chat .typing-indicator {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
 }
 
-.typing-indicator__dot {
+.fortiidentity-chat .typing-indicator__dot {
     width: 0.45rem;
     height: 0.45rem;
     border-radius: 999px;
@@ -200,11 +223,11 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     animation: typing-bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator__dot:nth-child(2) {
+.fortiidentity-chat .typing-indicator__dot:nth-child(2) {
     animation-delay: 0.15s;
 }
 
-.typing-indicator__dot:nth-child(3) {
+.fortiidentity-chat .typing-indicator__dot:nth-child(3) {
     animation-delay: 0.3s;
 }
 
@@ -219,7 +242,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     }
 }
 
-.message__sources {
+.fortiidentity-chat .message__sources {
     font-size: 0.75rem;
     color: rgba(148, 163, 184, 0.8);
     background: rgba(13, 17, 23, 0.6);
@@ -228,7 +251,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     padding: 0.65rem 0.75rem;
 }
 
-.message__sources-summary {
+.fortiidentity-chat .message__sources-summary {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
@@ -236,7 +259,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     margin-bottom: 0.25rem;
 }
 
-.message__sources-summary-label {
+.fortiidentity-chat .message__sources-summary-label {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -245,7 +268,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     margin-right: 0.25rem;
 }
 
-.message__citation-badge {
+.fortiidentity-chat .message__citation-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -259,17 +282,17 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.message__citation-badge:hover,
-.message__citation-badge:focus {
+.fortiidentity-chat .message__citation-badge:hover,
+.fortiidentity-chat .message__citation-badge:focus {
     background: rgba(31, 111, 235, 0.35);
     color: #fff;
 }
 
-.message__sources-details {
+.fortiidentity-chat .message__sources-details {
     margin-top: 0.25rem;
 }
 
-.message__sources-details summary {
+.fortiidentity-chat .message__sources-details summary {
     cursor: pointer;
     color: rgba(226, 232, 240, 0.75);
     font-weight: 600;
@@ -279,26 +302,26 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     gap: 0.3rem;
 }
 
-.message__sources-details summary:hover,
-.message__sources-details summary:focus {
+.fortiidentity-chat .message__sources-details summary:hover,
+.fortiidentity-chat .message__sources-details summary:focus {
     color: rgba(226, 232, 240, 0.95);
 }
 
-.message__sources-details summary::after {
+.fortiidentity-chat .message__sources-details summary::after {
     content: '▾';
     font-size: 0.65rem;
     opacity: 0.8;
 }
 
-.message__sources-details[open] summary::after {
+.fortiidentity-chat .message__sources-details[open] summary::after {
     content: '▴';
 }
 
-.message__sources-details summary::-webkit-details-marker {
+.fortiidentity-chat .message__sources-details summary::-webkit-details-marker {
     display: none;
 }
 
-.message__sources-heading {
+.fortiidentity-chat .message__sources-heading {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -306,7 +329,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     margin-bottom: 0.35rem;
 }
 
-.message__sources-list {
+.fortiidentity-chat .message__sources-list {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -315,41 +338,41 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     gap: 0.35rem;
 }
 
-.message__sources-item {
+.fortiidentity-chat .message__sources-item {
     display: flex;
     gap: 0.4rem;
     align-items: flex-start;
 }
 
-.message__citation-label {
+.fortiidentity-chat .message__citation-label {
     font-weight: 600;
     color: var(--primary);
     flex-shrink: 0;
 }
 
-.message__citation-text {
+.fortiidentity-chat .message__citation-text {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
     color: rgba(148, 163, 184, 0.85);
 }
 
-.message__citation-text a {
+.fortiidentity-chat .message__citation-text a {
     color: rgba(148, 163, 184, 0.95);
     text-decoration: underline;
 }
 
-.message__citation-text a:hover,
-.message__citation-text a:focus {
+.fortiidentity-chat .message__citation-text a:hover,
+.fortiidentity-chat .message__citation-text a:focus {
     color: var(--primary);
 }
 
-.message__citation-preview {
+.fortiidentity-chat .message__citation-preview {
     font-style: italic;
     color: rgba(148, 163, 184, 0.7);
 }
 
-.chat-widget__form {
+.fortiidentity-chat .chat-widget__form {
     padding: 1rem 1.25rem 1.25rem;
     border-top: 1px solid rgba(148, 163, 184, 0.15);
     background: rgba(13, 17, 23, 0.94);
@@ -358,7 +381,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     gap: 0.75rem;
 }
 
-.chat-widget__input {
+.fortiidentity-chat .chat-widget__input {
     width: 100%;
     resize: none;
     border-radius: 16px;
@@ -370,17 +393,17 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     background: rgba(15, 23, 42, 0.7);
 }
 
-.chat-widget__input:focus {
+.fortiidentity-chat .chat-widget__input:focus {
     outline: 2px solid rgba(31, 111, 235, 0.6);
     outline-offset: 2px;
 }
 
-.chat-widget__actions {
+.fortiidentity-chat .chat-widget__actions {
     display: flex;
     justify-content: flex-end;
 }
 
-.chat-widget__send {
+.fortiidentity-chat .chat-widget__send {
     padding: 0.65rem 1.5rem;
     border-radius: 999px;
     border: none;
@@ -392,7 +415,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
     box-shadow: 0 10px 30px rgba(31, 111, 235, 0.35);
 }
 
-.sr-only {
+.fortiidentity-chat .sr-only {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -412,7 +435,7 @@ body.fortiidentity-chat-standalone .open-chat:hover,
         padding: 1.75rem;
     }
 
-    .chat-widget {
+    .fortiidentity-chat .chat-widget {
         right: 12px;
         bottom: 88px;
         width: calc(100vw - 24px);
