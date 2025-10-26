@@ -8,11 +8,12 @@ from typing import Any, Dict, List, Optional, TypedDict
 
 import chromadb
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from enum import Enum
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from langchain_community.document_loaders import (
     PyPDFLoader, DirectoryLoader, TextLoader, BSHTMLLoader
 )
@@ -22,6 +23,11 @@ import ssl
 
 # Import task manager for queue handling
 from app.common.task_manager import queue_chat_request, get_task_status, TaskStatus
+from app.common.knowledge_base import (
+    list_cards,
+    get_card,
+    add_review,
+)
 
 # Load environment variables
 load_dotenv()
@@ -48,6 +54,60 @@ app.add_middleware(
 STATIC_DIR = Path(__file__).parent.parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+ADMIN_REVIEW_TOKEN = os.getenv("ADMIN_REVIEW_TOKEN", "").strip()
+
+
+class KnowledgeCardModel(BaseModel):
+    id: str
+    canonicalQuestion: str | None = None
+    shortAnswer: str | None = None
+    stepByStep: list[str] | str | None = None
+    links: list[str] | None = None
+    constraints: list[str] | None = None
+    caveats: list[str] | None = None
+    metrics: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
+    status: str
+    reviews: list[dict[str, Any]] | None = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "allow"
+
+
+class ReviewDecision(str, Enum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    NEEDS_CHANGES = "needs_changes"
+
+
+class KnowledgeCardReview(BaseModel):
+    reviewer: str
+    rating: int
+    decision: ReviewDecision
+    notes: str | None = None
+
+    @validator("reviewer")
+    def validate_reviewer(cls, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            raise ValueError("Reviewer is required")
+        return value
+
+    @validator("rating")
+    def validate_rating(cls, value: int) -> int:
+        if not 1 <= value <= 5:
+            raise ValueError("Rating must be between 1 and 5")
+        return value
+
+
+def require_admin(request: Request):
+    if not ADMIN_REVIEW_TOKEN:
+        return
+    token = request.headers.get("X-Admin-Token") or request.query_params.get("admin_token")
+    if token != ADMIN_REVIEW_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
 
 
 class AskBody(BaseModel):
@@ -78,9 +138,56 @@ def serve_embed() -> FileResponse:
     return FileResponse(embed_path)
 
 
+@app.get("/admin", include_in_schema=False)
+def serve_admin_portal() -> FileResponse:
+    review_path = STATIC_DIR / "review.html"
+    if not review_path.exists():
+        raise HTTPException(status_code=404, detail="Admin review UI not found")
+    return FileResponse(review_path)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "db_dir": DB_DIR, "collection": COLLECTION}
+
+
+@app.get("/knowledge-cards", response_model=List[KnowledgeCardModel])
+def fetch_knowledge_cards(
+    status: Optional[str] = None,
+    _: None = Depends(require_admin),
+):
+    cards = list_cards(status)
+    return [KnowledgeCardModel(**card) for card in cards]
+
+
+@app.get("/knowledge-cards/{card_id}", response_model=KnowledgeCardModel)
+def fetch_knowledge_card(card_id: str, _: None = Depends(require_admin)):
+    card = get_card(card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Knowledge card not found")
+    return KnowledgeCardModel(**card)
+
+
+@app.post("/knowledge-cards/{card_id}/review", response_model=KnowledgeCardModel)
+def submit_knowledge_card_review(
+    card_id: str,
+    review: KnowledgeCardReview,
+    _: None = Depends(require_admin),
+):
+    card = get_card(card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Knowledge card not found")
+
+    review_payload = {
+        "reviewer": review.reviewer,
+        "rating": review.rating,
+        "decision": review.decision.value,
+        "notes": review.notes,
+    }
+    updated = add_review(card_id, review_payload, new_status=review.decision.value)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Unable to update knowledge card")
+    return KnowledgeCardModel(**updated)
 
 
 # -------- Task Management Endpoints --------

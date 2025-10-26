@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knowledge Card Review Portal</title>
+  <link rel="stylesheet" href="/static/review.css" />
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1>Knowledge Card Review</h1>
+      <p class="tagline">Human-in-the-loop quality control for generated answers.</p>
+    </div>
+    <button id="refreshCards" class="secondary">Refresh</button>
+  </header>
+
+  <main>
+    <section class="credentials">
+      <div class="field">
+        <label for="adminToken">Admin token</label>
+        <input type="password" id="adminToken" placeholder="Paste admin token" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="reviewerName">Reviewer name</label>
+        <input type="text" id="reviewerName" placeholder="Jane Doe" autocomplete="off" />
+      </div>
+      <div class="actions">
+        <button id="applyToken">Apply token</button>
+        <span id="tokenStatus" class="token-status"></span>
+      </div>
+    </section>
+
+    <section class="cards-panel">
+      <header class="panel-header">
+        <h2>Knowledge cards</h2>
+        <div class="filters">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="needs_changes">Needs changes</option>
+            <option value="rejected">Rejected</option>
+            <option value="">All</option>
+          </select>
+        </div>
+      </header>
+      <div id="cardList" class="card-list"></div>
+      <div id="cardMessage" class="empty-state" hidden>No knowledge cards found for the selected filter.</div>
+    </section>
+
+    <section class="tester-panel">
+      <header class="panel-header">
+        <h2>Chatbot response tester</h2>
+        <p class="section-help">Use this tool to validate answers from the chatbot with the latest knowledge base.</p>
+      </header>
+      <form id="chatbotForm" class="tester-form">
+        <label for="testQuestion">Question</label>
+        <textarea id="testQuestion" rows="4" placeholder="Ask a question the chatbot should answer..."></textarea>
+        <div class="tester-controls">
+          <div class="field">
+            <label for="testTopK">Top K</label>
+            <input type="number" id="testTopK" value="5" min="1" max="20" />
+          </div>
+          <div class="field checkbox">
+            <input type="checkbox" id="testWebSearch" checked />
+            <label for="testWebSearch">Enable web search</label>
+          </div>
+          <button type="submit">Run test</button>
+        </div>
+      </form>
+      <div id="chatbotStatus" class="status"></div>
+      <article id="chatbotResult" class="chatbot-result" hidden>
+        <header>
+          <h3>Chatbot Answer</h3>
+          <p id="chatbotQuestion"></p>
+        </header>
+        <pre id="chatbotAnswer"></pre>
+        <div id="chatbotNote" class="note" hidden></div>
+        <div id="chatbotSources" class="sources" hidden></div>
+      </article>
+    </section>
+  </main>
+
+  <template id="reviewTemplate">
+    <article class="card">
+      <header class="card-header">
+        <div>
+          <h3 class="card-title"></h3>
+          <p class="card-status"></p>
+        </div>
+        <span class="card-id"></span>
+      </header>
+      <section class="card-body"></section>
+      <section class="card-reviews"></section>
+      <form class="review-form">
+        <h4>Submit review</h4>
+        <div class="field">
+          <label>Rating</label>
+          <div class="rating-options">
+            <label><input type="radio" name="rating" value="1" /> 1</label>
+            <label><input type="radio" name="rating" value="2" /> 2</label>
+            <label><input type="radio" name="rating" value="3" /> 3</label>
+            <label><input type="radio" name="rating" value="4" /> 4</label>
+            <label><input type="radio" name="rating" value="5" checked /> 5</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="decision">Decision</label>
+          <select name="decision" class="decision-select">
+            <option value="approved">Approve</option>
+            <option value="needs_changes">Needs changes</option>
+            <option value="rejected">Reject</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="notes">Notes</label>
+          <textarea name="notes" rows="3" placeholder="Add review notes or follow-up actions"></textarea>
+        </div>
+        <button type="submit">Submit review</button>
+      </form>
+    </article>
+  </template>
+
+  <script src="/static/review.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "kc-1001",
+    "canonicalQuestion": "How do I reset the MFA token for a user?",
+    "shortAnswer": "Use the FortiIdentity Cloud admin portal to revoke the existing token and issue a new activation QR code.",
+    "stepByStep": [
+      "Open FortiIdentity Cloud and sign in with admin privileges.",
+      "Navigate to Users > Authentication Tokens.",
+      "Select the affected user and choose 'Revoke token'.",
+      "Click 'Issue new token' to generate a new activation email or QR code."
+    ],
+    "links": [
+      "https://example.com/docs/mfa/reset-token"
+    ],
+    "constraints": [
+      "Applies to FortiIdentity Cloud v2.1 and later"
+    ],
+    "caveats": [
+      "User must re-enroll the authenticator app after reset"
+    ],
+    "metrics": {
+      "resolutionRate": 0.93
+    },
+    "metadata": {
+      "issueType": "authentication",
+      "productVersion": "2.1",
+      "language": "en"
+    },
+    "status": "pending",
+    "reviews": []
+  }
+]
