@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowledge Card Review Portal</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="review-portal">
+    <header class="review-header">
+        <div class="review-header__content">
+            <h1>Knowledge Card Review</h1>
+            <p class="review-header__subtitle">
+                Authenticate with the admin token to review learning agent output and validate chatbot answers.
+            </p>
+        </div>
+        <button type="button" id="logoutButton" class="secondary" hidden>Sign out</button>
+    </header>
+
+    <main class="review-main">
+        <section id="authSection" class="review-card">
+            <h2>Admin access</h2>
+            <p>
+                Provide the shared admin token configured on the server (<code>ADMIN_TOKEN</code>). The token is stored in
+                your browser for this session only.
+            </p>
+            <form id="tokenForm" class="token-form" autocomplete="off">
+                <label for="adminToken">Admin token</label>
+                <input id="adminToken" name="adminToken" type="password" required placeholder="••••••" />
+                <button type="submit">Unlock review queue</button>
+            </form>
+            <button type="button" id="skipToken" class="link-button">Continue without a token</button>
+            <p class="hint">
+                If no admin token is configured the queue will load directly, but enabling a token is strongly recommended for production.
+            </p>
+        </section>
+
+        <section id="queueSection" class="review-card review-card--wide" hidden>
+            <div class="review-card__header">
+                <div>
+                    <h2>Queued knowledge cards</h2>
+                    <p>Approve, rate, or request revisions before the cards are published.</p>
+                </div>
+                <div class="review-card__actions">
+                    <button type="button" id="refreshQueue" class="secondary">Refresh</button>
+                </div>
+            </div>
+            <div id="messageBar" class="message-bar" role="status" aria-live="polite"></div>
+            <div id="reviewList" class="review-grid" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <dialog id="chatTester" class="tester-dialog">
+        <form method="dialog" id="testerForm" class="tester-form">
+            <header class="tester-form__header">
+                <h2 id="testerTitle">Chatbot playback</h2>
+            </header>
+            <label for="testerQuestion">Question to send</label>
+            <textarea id="testerQuestion" name="question" rows="4" required></textarea>
+            <p id="testerDescription" class="hint">
+                The prompt is prefilled with the card's canonical question. Adjust it before running the live chatbot test.
+            </p>
+            <div class="tester-actions">
+                <button type="button" id="closeTester" class="secondary">Close</button>
+                <button type="submit" id="runTest">Send to chatbot</button>
+            </div>
+            <div id="testerStatus" class="tester-status" aria-live="polite"></div>
+            <article id="testerResult" class="tester-result" hidden>
+                <h3>Assistant response</h3>
+                <p id="testerAnswer"></p>
+                <div id="testerNote" class="tester-note" hidden></div>
+                <div id="testerCitations" class="tester-citations" hidden></div>
+            </article>
+        </form>
+    </dialog>
+
+    <script src="/static/review.js" defer></script>
+</body>
+</html>

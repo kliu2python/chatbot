@@ -3,18 +3,20 @@ import logging
 import os
 import threading
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict
+from typing import Literal
 
 import chromadb
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from langchain_community.tools import DuckDuckGoSearchResults
 from langgraph.graph import END, StateGraph
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
 try:  # Optional dependency for file watching
@@ -68,6 +70,9 @@ WEB_SEARCH_K = int(os.getenv("WEB_SEARCH_K", "3"))
 DATA_DIR = Path(os.getenv("DATA_DIR", "./data"))
 WATCH_DOCS = os.getenv("WATCH_DOCS", "true").lower() == "true"
 REINGEST_DEBOUNCE = float(os.getenv("REINGEST_DEBOUNCE", "3.0"))
+REVIEW_QUEUE_DIR = Path(os.getenv("REVIEW_QUEUE_DIR", "./review_queue"))
+REVIEW_QUEUE_JSONL = REVIEW_QUEUE_DIR / "review_queue.jsonl"
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
 # Init shared resources
 client = chromadb.PersistentClient(path=DB_DIR)
@@ -118,6 +123,9 @@ STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+_review_lock = threading.Lock()
+_admin_warning_emitted = False
+
 
 class AskBody(BaseModel):
     question: str
@@ -136,10 +144,87 @@ class RetrievalState(TypedDict, total=False):
     combined_contexts: List[Dict[str, Any]]
 
 
+class ReviewUpdateBody(BaseModel):
+    status: Optional[
+        Literal["pending", "approved", "changes_requested", "rejected"]
+    ] = Field(
+        default=None,
+        description="Updated review status (pending, approved, changes_requested, rejected)",
+    )
+    rating: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=5,
+        description="Reviewer rating from 1-5",
+    )
+    notes: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="Reviewer notes or remediation guidance",
+    )
+
+
 def embed(texts: List[str]) -> List[List[float]]:
     return embedder.encode(
         texts, show_progress_bar=False, normalize_embeddings=True
     ).tolist()
+
+
+def _load_review_queue() -> List[Dict[str, Any]]:
+    if not REVIEW_QUEUE_JSONL.exists():
+        return []
+
+    items: List[Dict[str, Any]] = []
+    with REVIEW_QUEUE_JSONL.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            payload = line.strip()
+            if not payload:
+                continue
+            try:
+                record = json.loads(payload)
+            except json.JSONDecodeError:
+                logger.warning("Skipping malformed review queue entry: %s", payload)
+                continue
+
+            record.setdefault("status", "pending")
+            record.setdefault("rating", None)
+            record.setdefault("notes", None)
+            rating_value = record.get("rating")
+            if isinstance(rating_value, str) and rating_value.strip():
+                try:
+                    record["rating"] = int(rating_value)
+                except ValueError:
+                    record["rating"] = None
+            elif isinstance(rating_value, float):
+                record["rating"] = int(rating_value)
+            items.append(record)
+    return items
+
+
+def _save_review_queue(items: List[Dict[str, Any]]) -> None:
+    REVIEW_QUEUE_DIR.mkdir(parents=True, exist_ok=True)
+    with REVIEW_QUEUE_JSONL.open("w", encoding="utf-8") as handle:
+        for item in items:
+            normalized = dict(item)
+            if normalized.get("rating") is not None:
+                try:
+                    normalized["rating"] = int(normalized["rating"])
+                except (TypeError, ValueError):
+                    normalized["rating"] = None
+            handle.write(json.dumps(normalized, ensure_ascii=False) + "\n")
+
+
+def _require_admin(x_admin_token: Optional[str] = Header(default=None)) -> None:
+    global _admin_warning_emitted
+    if ADMIN_TOKEN:
+        if x_admin_token != ADMIN_TOKEN:
+            raise HTTPException(status_code=401, detail="Invalid admin token")
+    else:
+        if not _admin_warning_emitted:
+            logger.warning(
+                "ADMIN_TOKEN is not set; admin review endpoints are exposed without authentication."
+            )
+            _admin_warning_emitted = True
 
 
 def build_prompt(question: str, contexts: List[Dict[str, Any]]) -> str:
@@ -213,6 +298,14 @@ def serve_index() -> FileResponse:
     if not index_path.exists():
         raise HTTPException(status_code=404, detail="Chat UI not found")
     return FileResponse(index_path)
+
+
+@app.get("/admin/review", include_in_schema=False)
+def serve_review_portal() -> FileResponse:
+    review_path = STATIC_DIR / "review.html"
+    if not review_path.exists():
+        raise HTTPException(status_code=404, detail="Review portal not found")
+    return FileResponse(review_path)
 
 
 @app.get("/health")
@@ -510,6 +603,39 @@ def stop_document_watcher():
         if _reingest_timer is not None:
             _reingest_timer.cancel()
             _reingest_timer = None
+
+
+@app.get("/admin/review/cards")
+def list_review_cards(_: None = Depends(_require_admin)):
+    cards = _load_review_queue()
+    return {"cards": cards}
+
+
+@app.post("/admin/review/cards/{card_id}")
+def update_review_card(card_id: str, body: ReviewUpdateBody, _: None = Depends(_require_admin)):
+    try:
+        update_data = body.model_dump(exclude_unset=True)  # type: ignore[attr-defined]
+    except AttributeError:  # pragma: no cover - pydantic v1 fallback
+        update_data = body.dict(exclude_unset=True)  # type: ignore[call-arg]
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No updates supplied")
+
+    with _review_lock:
+        cards = _load_review_queue()
+        for card in cards:
+            if card.get("cardId") != card_id:
+                continue
+            if "status" in update_data:
+                card["status"] = update_data["status"]
+            if "rating" in update_data:
+                card["rating"] = update_data["rating"]
+            if "notes" in update_data:
+                card["notes"] = update_data["notes"]
+            card["updatedAt"] = datetime.utcnow().isoformat() + "Z"
+            _save_review_queue(cards)
+            return {"card": card}
+
+    raise HTTPException(status_code=404, detail=f"Card {card_id} not found in review queue")
 
 
 @app.on_event("startup")

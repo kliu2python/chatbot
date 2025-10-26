@@ -36,6 +36,66 @@ curl -s http://localhost:8000/ask -X POST -H "Content-Type: application/json" -d
 
 If you don't set an LLM key, the server will return **retrieved passages** only so you can still test retrieval. Citations remain available for each chunk/web result even in retrieval-only mode.
 
+## Learning agent: turn emails into knowledge cards
+
+Historical support conversations can be transformed into reusable knowledge cards with the LangChain-powered learning agent. It performs Q/A extraction, semantic clustering, and card generation before pushing the results into the same Chroma collection the chatbot uses.
+
+```bash
+# Option A: point to a single JSON/JSONL export of email conversations
+#   [
+#     {"id": "123", "subject": "Login issue", "body": "...", "productVersion": "2.1"},
+#     ...
+#   ]
+
+# Option B: drop raw .eml files (and even .txt/.md notes) into a folder
+#   tree ./mailbox/
+#     mailbox/
+#       ticket-1001.eml
+#       ticket-1002.eml
+#       escalations/agent-note.txt
+
+# Run the learning pipeline against either format
+python -m app.learning_agent \
+  --input ./mailbox \  # accepts a file or directory
+  --output ./knowledge_cards \
+  --db-dir ./chroma_db \
+  --collection faq \
+  --review-out ./review_queue   # optional: prepare human approval tasks
+
+# Generated artifacts
+#   ./knowledge_cards/json/<card_id>.json    # Structured cards for auditing
+#   ./knowledge_cards/yaml/<card_id>.yaml    # YAML view of the same card
+#   ./knowledge_cards/index.json             # Lightweight catalog for dashboards
+#   ./review_queue/review_queue.csv          # (if --review-out) queue for SMEs to rate
+#   ./review_queue/review_queue.jsonl        # API-friendly review queue format
+# Cards are also embedded into Chroma for retrieval by the chatbot agent.
+```
+
+The pipeline defaults to `sentence-transformers/all-MiniLM-L6-v2` for embeddings and de-duplicates questions when their cosine similarity exceeds `0.85`. Adjust `--embed-model` or `--similarity-threshold` to suit your dataset. Each card stores provenance (`sourceEmails`), average confidence, and optional metadata so the `review_queue.*` files can be triaged quickly. Reviewers mark `status`, `rating`, and `notes` in the CSV, or post back the JSONL entries to an internal approval API, before the cards are promoted into the production knowledge base.
+
+## Review portal: human-in-the-loop approvals
+
+The FastAPI server now ships with an admin-only review portal that reads the JSONL queue produced by `--review-out` and lets subject matter experts rate each knowledge card before publication.
+
+1. Export a queue with the learning agent (see the previous section). By default, the CLI writes to `./review_queue/review_queue.jsonl`.
+2. Point the API to that directory:
+
+   ```bash
+   export REVIEW_QUEUE_DIR=./review_queue
+   export ADMIN_TOKEN=supersecret  # optional but strongly recommended
+   uvicorn app.server:app --host 0.0.0.0 --port 8000
+   ```
+
+3. Visit `http://localhost:8000/admin/review` and authenticate with the shared `ADMIN_TOKEN`.
+
+From the portal you can:
+
+- View each generated card, including confidence metrics, metadata, and source emails.
+- Set a review status (`pending`, `approved`, `changes_requested`, or `rejected`), capture a 1–5 rating, and leave notes for the knowledge management team.
+- Trigger a “Test chatbot” workflow that sends the card’s canonical question (or any edited prompt) to the live `/ask` endpoint so you can confirm the production assistant’s response before approving the card.
+
+The portal persists updates directly back into `review_queue.jsonl`, so any downstream automation (e.g., nightly publishers) can ingest the reviewer decisions.
+
 ## Docker usage
 
 You can build and run the chatbot entirely from a container. The included `Dockerfile` and `docker-compose.yml` assume that your documentation lives in `./data` on the host and persists the vector store in a named volume so it survives restarts.
