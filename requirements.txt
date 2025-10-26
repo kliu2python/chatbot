@@ -1,0 +1,16 @@
+chromadb
+sentence-transformers
+pypdf
+beautifulsoup4
+fastapi
+uvicorn
+python-dotenv
+openai
+langchain
+langchain-community
+langchain-openai
+langgraph
+duckduckgo-search
+watchdog
+redis
+rq

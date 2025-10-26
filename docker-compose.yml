@@ -1,0 +1,66 @@
+services:
+  # Document ingestion service
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    volumes:
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+    environment:
+      - DATA_DIR=./data
+      - DB_DIR=./chroma_db
+      - COLLECTION=faq
+      - MODEL=sentence-transformers/all-MiniLM-L6-v2
+    command: python -m app.ingest --data_dir ./data --db_dir ./chroma_db --collection faq --reset
+
+  # API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8070:8080"
+      - "8443:8443"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+    environment:
+      - DB_DIR=./chroma_db
+      - COLLECTION=faq
+      - REDIS_HOST=10.160.13.16
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=sk-a122sVi4BhKo8XhtRx3Epg
+      - OPENAI_BASE_URL=https://litellm.ai-server.fortiappsec.com/v1/
+      - OPENAI_MODEL=qwen3-235b-a22b
+      - SSL_CERT_FILE=/app/app/tls.crt
+      - SSL_KEY_FILE=/app/app/tls.key
+    command: python app/api/start_server.py
+    depends_on:
+      - ingest
+
+  # Worker service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+    environment:
+      - DB_DIR=./chroma_db
+      - COLLECTION=faq
+      - REDIS_HOST=10.160.13.16
+      - REDIS_PORT=6379
+      - OPENAI_API_KEY=sk-a122sVi4BhKo8XhtRx3Epg
+      - OPENAI_BASE_URL=https://litellm.ai-server.fortiappsec.com/v1/
+      - OPENAI_MODEL=qwen3-235b-a22b
+    command: python app/worker/start_workers.py
+    depends_on:
+      - ingest
+
+volumes:
+  redis_data:
+  chroma_data:

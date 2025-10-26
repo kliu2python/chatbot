@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chroma FAQ Bot</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="fortiidentity-chat-standalone">
+    <main class="page-wrapper">
+        <section class="intro">
+            <h1>Chroma FAQ Bot</h1>
+            <p>
+                Start a conversation with the FAQ assistant to get guidance on our services.
+            </p>
+            <button class="open-chat" id="openChatFromIntro">Open FAQ Chat</button>
+        </section>
+    </main>
+
+    <button id="chatToggle" class="chat-toggle" aria-label="Open FAQ chat">
+        <span class="chat-toggle__icon">💬</span>
+    </button>
+
+    <section id="chatWidget" class="chat-widget" aria-live="polite" aria-expanded="false">
+        <header class="chat-widget__header">
+            <div>
+                <h2>FAQ Support</h2>
+                <p class="chat-widget__subtitle">Ask questions about our services</p>
+            </div>
+            <div class="chat-widget__controls">
+                <button id="endSession" class="chat-widget__end-session" aria-label="End session">End Session</button>
+                <button id="closeChat" class="chat-widget__close" aria-label="Close chat">×</button>
+            </div>
+        </header>
+        <div id="chatMessages" class="chat-widget__messages"></div>
+        <form id="chatForm" class="chat-widget__form" autocomplete="off">
+            <label class="sr-only" for="chatInput">Type your question</label>
+            <textarea id="chatInput" class="chat-widget__input" rows="2" placeholder="Ask a question..." required></textarea>
+            <div class="chat-widget__actions">
+                <button type="submit" id="sendButton" class="chat-widget__send">Send</button>
+            </div>
+        </form>
+    </section>
+
+    <script src="/static/chat.js" defer></script>
+</body>
+</html>

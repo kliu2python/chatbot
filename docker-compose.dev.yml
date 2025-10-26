@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    environment:
+      - REDIS_HOST=10.160.13.16
+      - REDIS_PORT=6379
+    command: uvicorn app.api.server:app --host 0.0.0.0 --port 8080 --reload
+
+  # Worker service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    environment:
+      - REDIS_HOST=10.160.13.16
+      - REDIS_PORT=6379
+    command: python app/worker/start_workers.py

@@ -1,0 +1,14 @@
+.idea/
+
+**/__pycache__/
+**/node_modules
+
+.env
+
+CLAUDE.md
+EMBED_INSTRUCTIONS.md
+
+**/cert.pem
+**/key.pem
+**/tls.cert
+**/tls.key

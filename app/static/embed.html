@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget</title>
+    <style>
+        :root {
+            --primary-color: #1f6feb;
+            --bg-dark: #0f172a;
+            --bg-darker: #0d1117;
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: rgba(148, 163, 184, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: rgba(13, 17, 23, 0.96);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: rgba(31, 111, 235, 0.12);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h2 {
+            color: white;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .end-session-button {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: rgba(200, 50, 50, 0.2);
+            color: #ff6b6b;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .end-session-button:hover {
+            background: rgba(200, 50, 50, 0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.25rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            padding: 1rem;
+            border-radius: 18px;
+            max-width: 90%;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+            line-height: 1.5;
+        }
+
+        .message--user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary-color), #144ea6);
+            color: #fff;
+        }
+
+        .message--bot {
+            align-self: flex-start;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .chat-form {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(13, 17, 23, 0.94);
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .chat-input {
+            flex: 1;
+            resize: none;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: var(--text-light);
+            background: rgba(15, 23, 42, 0.7);
+            height: 56px;
+        }
+
+        .chat-input:focus {
+            outline: 2px solid rgba(31, 111, 235, 0.6);
+            outline-offset: 2px;
+        }
+
+        .send-button {
+            padding: 0 1.5rem;
+            border-radius: 16px;
+            border: none;
+            background: var(--primary-color);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 10px 30px rgba(31, 111, 235, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 56px; /* Fixed height to match input box */
+            flex-shrink: 0;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 30px rgba(31, 111, 235, 0.35);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 18px;
+            align-self: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .typing-indicator.visible {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0.6);
+                opacity: 0.4;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                border-radius: 0;
+            }
+        }
+
+        /* Citation styles */
+        .message__sources {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .message__sources-heading {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+
+        .message__sources-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .message__sources-summary-label {
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .message__citation-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: rgba(31, 111, 235, 0.15);
+            color: #1f6feb;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            border: 1px solid rgba(31, 111, 235, 0.3);
+        }
+
+        .message__citation-badge:hover {
+            background: rgba(31, 111, 235, 0.25);
+        }
+
+        .message__sources-details {
+            margin-top: 0.5rem;
+        }
+
+        .message__sources-list {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .message__sources-item {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .message__sources-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .message__citation-label {
+            display: inline-block;
+            width: 2rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .message__citation-text a,
+        .message__citation-text span {
+            color: #1f6feb;
+            text-decoration: none;
+        }
+
+        .message__citation-text a:hover {
+            text-decoration: underline;
+        }
+
+        .message__citation-preview {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Processing message style */
+        .message--processing {
+            align-self: flex-start;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>FAQ Support</h2>
+            <div class="chat-controls">
+                <button class="end-session-button" id="endSessionButton">End Session</button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message message--bot">
+                <div class="message-text">Hello! How can I help you today?</div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+
+        <form class="chat-form" id="chatForm">
+            <div class="chat-input-container">
+                <textarea
+                    class="chat-input"
+                    id="messageInput"
+                    placeholder="Type your question..."
+                    rows="1"
+                ></textarea>
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function() {
+            // Configuration
+            const ASK_ENDPOINT = '/ask';
+            const SESSION_KEY = 'chroma-faq-bot-session-id';
+
+            // DOM Elements
+            const chatForm = document.getElementById('chatForm');
+            const messageInput = document.getElementById('messageInput');
+            const chatMessages = document.getElementById('chatMessages');
+            const sendButton = document.getElementById('sendButton');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const endSessionButton = document.getElementById('endSessionButton');
+
+            // Session management
+            let sessionId = localStorage.getItem(SESSION_KEY);
+            let inactivityTimer = null;
+            const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+            // Store references to active polls to prevent duplicates
+            const activePolls = new Map();
+
+            if (!sessionId) {
+                sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+                localStorage.setItem(SESSION_KEY, sessionId);
+            }
+
+            // Reset inactivity timer
+            function resetInactivityTimer() {
+                if (inactivityTimer) {
+                    clearTimeout(inactivityTimer);
+                }
+                inactivityTimer = setTimeout(endSession, INACTIVITY_TIMEOUT);
+            }
+
+            // End session function
+            function endSession() {
+                // Clear session data
+                localStorage.removeItem(SESSION_KEY);
+                sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+                localStorage.setItem(SESSION_KEY, sessionId);
+
+                // Clear chat messages
+                if (chatMessages) {
+                    chatMessages.innerHTML = '';
+                    // Add welcome message
+                    const welcomeMessage = document.createElement('div');
+                    welcomeMessage.className = 'message message--bot';
+                    welcomeMessage.innerHTML = '<div class="message-text">Hello! How can I help you today?</div>';
+                    chatMessages.appendChild(welcomeMessage);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+
+                // Reset inactivity timer
+                if (inactivityTimer) {
+                    clearTimeout(inactivityTimer);
+                    inactivityTimer = null;
+                }
+            }
+
+            // Auto-resize textarea
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+
+                // Limit maximum height
+                if (this.scrollHeight > 150) {
+                    this.style.overflowY = 'scroll';
+                } else {
+                    this.style.overflowY = 'hidden';
+                }
+            });
+
+            // Handle form submission
+            chatForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                // Add user message to chat
+                addMessage(message, 'user');
+
+                // Clear input and reset height
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+                messageInput.focus();
+
+                // Show typing indicator
+                showTypingIndicator();
+
+                // Disable send button
+                sendButton.disabled = true;
+                sendButton.textContent = 'Sending...';
+
+                // Record start time for processing time calculation
+                const startTime = Date.now();
+
+                try {
+                    // Send message to server
+                    const response = await fetch(ASK_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            question: message,
+                            session_id: sessionId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Update session ID if needed
+                    if (data.session_id && data.session_id !== sessionId) {
+                        sessionId = data.session_id;
+                        localStorage.setItem(SESSION_KEY, sessionId);
+                    }
+
+                    // Check if we received a task ID (asynchronous processing)
+                    if (data.task_id) {
+                        // Start polling for the task result
+                        await pollForTaskResult(data.task_id, message, startTime);
+                    } else {
+                        // Handle synchronous responses
+                        const botMessage = data.answer || data.note || 'Sorry, I could not process your request.';
+                        const citations = data.citations || data.sources || [];
+                        const processingTime = Math.round((Date.now() - startTime) / 1000);
+                        addMessage(botMessage, 'bot', citations, processingTime);
+                    }
+
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    const processingTime = Math.round((Date.now() - startTime) / 1000);
+                    addMessage('Sorry, something went wrong. Please try again.', 'bot', [], processingTime);
+                } finally {
+                    // Hide typing indicator
+                    hideTypingIndicator();
+
+                    // Re-enable send button
+                    sendButton.disabled = false;
+                    sendButton.textContent = 'Send';
+
+                    // Reset inactivity timer
+                    resetInactivityTimer();
+                }
+            });
+
+            // Enable Enter key to send messages (without Shift for new lines)
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (messageInput.value.trim()) {
+                        chatForm.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+
+            // End session button handler
+            endSessionButton.addEventListener('click', endSession);
+
+            // Task polling mechanism
+            async function pollForTaskResult(taskId, question, startTime) {
+                // Prevent duplicate polling for the same task
+                if (activePolls.has(taskId)) {
+                    return;
+                }
+
+                activePolls.set(taskId, true);
+
+                try {
+                    const TASK_STATUS_ENDPOINT = `/tasks/${taskId}`;
+
+                    // Poll every 1 second until task is complete
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(TASK_STATUS_ENDPOINT, {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            if (!response.ok) {
+                                clearInterval(pollInterval);
+                                activePolls.delete(taskId);
+                                hideTypingIndicator();
+                                const processingTime = Math.round((Date.now() - startTime) / 1000);
+                                addMessage('Sorry, I encountered an issue while processing your request.', 'bot', [], processingTime);
+                                return;
+                            }
+
+                            const taskData = await response.json();
+
+                            // Check task status
+                            if (taskData.status === 'completed') {
+                                clearInterval(pollInterval);
+                                activePolls.delete(taskId);
+                                hideTypingIndicator();
+
+                                // Extract the result from the completed task
+                                if (taskData.result) {
+                                    const answer = taskData.result.answer || taskData.result.response || 'No answer available.';
+                                    const citations = taskData.result.citations || taskData.result.sources || [];
+                                    const processingTime = Math.round((Date.now() - startTime) / 1000);
+                                    addMessage(answer, 'bot', citations, processingTime);
+                                } else {
+                                    const processingTime = Math.round((Date.now() - startTime) / 1000);
+                                    addMessage('Sorry, I could not process your request.', 'bot', [], processingTime);
+                                }
+                            } else if (taskData.status === 'failed') {
+                                clearInterval(pollInterval);
+                                activePolls.delete(taskId);
+                                hideTypingIndicator();
+                                const errorMessage = taskData.error || 'Sorry, I encountered an error processing your request.';
+                                const processingTime = Math.round((Date.now() - startTime) / 1000);
+                                addMessage(errorMessage, 'bot', [], processingTime);
+                            } else {
+                                // Show intermediate processing status with human-like messages
+                                const statuses = ['thinking', 'analyzing your question', 'searching for answers', 'formulating response', 'writing response'];
+                                const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                                const statusMessage = ` ${randomStatus}...`;
+                                updateProcessingMessage(statusMessage);
+                            }
+                            // For 'queued' or 'processing' statuses, continue polling
+                        } catch (error) {
+                            console.error('Error polling for task result:', error);
+                            // Continue polling despite individual request failures
+                        }
+                    }, 1000); // Poll every 1 second
+
+                    // Set a timeout to stop polling after 5 minutes
+                    setTimeout(() => {
+                        if (activePolls.has(taskId)) {
+                            clearInterval(pollInterval);
+                            activePolls.delete(taskId);
+                            hideTypingIndicator();
+                            const processingTime = Math.round((Date.now() - startTime) / 1000);
+                            addMessage('Sorry, your request is taking longer than expected. Please try again.', 'bot', [], processingTime);
+                        }
+                    }, 300000); // 5 minutes timeout
+                } catch (error) {
+                    activePolls.delete(taskId);
+                    hideTypingIndicator();
+                    const processingTime = Math.round((Date.now() - startTime) / 1000);
+                    addMessage('Sorry, I encountered an issue setting up your request.', 'bot', [], processingTime);
+                    console.error('Error starting task poll:', error);
+                }
+            }
+
+            // Update processing message
+            function updateProcessingMessage(status) {
+                // Remove any existing processing messages
+                const existingProcessingMessages = chatMessages.querySelectorAll('.message--processing');
+                existingProcessingMessages.forEach(msg => msg.remove());
+
+                // Create new processing message
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message message--processing';
+                messageDiv.innerHTML = `<div class="message-text">${status}</div>`;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Create citation list
+            function createCitationList(citations = []) {
+                if (!Array.isArray(citations) || citations.length === 0) {
+                    return null;
+                }
+
+                const sourceBlock = document.createElement('div');
+                sourceBlock.className = 'message__sources';
+
+                const heading = document.createElement('div');
+                heading.className = 'message__sources-heading';
+                heading.textContent = 'Sources';
+                sourceBlock.appendChild(heading);
+
+                const summaryRow = document.createElement('div');
+                summaryRow.className = 'message__sources-summary';
+
+                const summaryLabel = document.createElement('span');
+                summaryLabel.className = 'message__sources-summary-label';
+                summaryLabel.textContent = 'References:';
+                summaryRow.appendChild(summaryLabel);
+
+                citations.forEach(citation => {
+                    const labelText = citation.label || `[${citation.id}]`;
+                    const badge = citation.url ? document.createElement('a') : document.createElement('span');
+                    badge.className = 'message__citation-badge';
+                    badge.textContent = labelText;
+
+                    if (citation.url) {
+                        badge.href = citation.url;
+                        badge.target = '_blank';
+                        badge.rel = 'noopener noreferrer';
+                    }
+
+                    const hoverDetails = [citation.title, citation.section].filter(Boolean).join(' · ');
+                    if (hoverDetails) {
+                        badge.title = hoverDetails;
+                        badge.setAttribute('aria-label', `${labelText} – ${hoverDetails}`);
+                    } else if (citation.title) {
+                        badge.title = citation.title;
+                        badge.setAttribute('aria-label', `${labelText} – ${citation.title}`);
+                    }
+
+                    summaryRow.appendChild(badge);
+                });
+
+                sourceBlock.appendChild(summaryRow);
+
+                const details = document.createElement('details');
+                details.className = 'message__sources-details';
+
+                const toggle = document.createElement('summary');
+                toggle.textContent = 'See source details';
+                toggle.setAttribute('aria-label', 'Toggle source details');
+                details.appendChild(toggle);
+
+                const list = document.createElement('ul');
+                list.className = 'message__sources-list';
+
+                citations.forEach(citation => {
+                    const item = document.createElement('li');
+                    item.className = 'message__sources-item';
+
+                    const label = document.createElement('span');
+                    label.className = 'message__citation-label';
+                    label.textContent = citation.label || `[${citation.id}]`;
+                    item.appendChild(label);
+
+                    const textWrapper = document.createElement('span');
+                    textWrapper.className = 'message__citation-text';
+
+                    const titleParts = [];
+                    if (citation.title) {
+                        titleParts.push(citation.title);
+                    }
+                    if (citation.section) {
+                        titleParts.push(citation.section);
+                    }
+                    const linkText = titleParts.join(' · ') || 'Source';
+
+                    if (citation.url) {
+                        const link = document.createElement('a');
+                        link.href = citation.url;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = linkText;
+                        textWrapper.appendChild(link);
+                    } else {
+                        const span = document.createElement('span');
+                        span.textContent = linkText;
+                        textWrapper.appendChild(span);
+                    }
+
+                    if (citation.preview) {
+                        const preview = document.createElement('span');
+                        preview.className = 'message__citation-preview';
+                        preview.textContent = ` — ${citation.preview}`;
+                        textWrapper.appendChild(preview);
+                    }
+
+                    item.appendChild(textWrapper);
+                    list.appendChild(item);
+                });
+
+                details.appendChild(list);
+                sourceBlock.appendChild(details);
+                return sourceBlock;
+            }
+
+            // Add message to chat
+            function addMessage(content, sender, citations = [], processingTime = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message message--${sender}`;
+
+                const messageText = document.createElement('div');
+                messageText.className = 'message-text';
+                messageText.innerHTML = content.replace(/\n/g, '<br>');
+                messageDiv.appendChild(messageText);
+
+                // Add processing time if available
+                if (processingTime !== null) {
+                    const metaDiv = document.createElement('div');
+                    metaDiv.className = 'message-meta';
+                    metaDiv.textContent = `Processed in ${processingTime} seconds`;
+                    messageDiv.appendChild(metaDiv);
+                }
+
+                // Add citations if available and not a processing message
+                if (sender === 'bot' && citations.length > 0) {
+                    const citationList = createCitationList(citations);
+                    if (citationList) {
+                        messageDiv.appendChild(citationList);
+                    }
+                }
+
+                chatMessages.appendChild(messageDiv);
+
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Typing indicator functions
+            function showTypingIndicator() {
+                typingIndicator.classList.add('visible');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function hideTypingIndicator() {
+                typingIndicator.classList.remove('visible');
+
+                // Remove any processing messages when hiding typing indicator
+                const processingMessages = chatMessages.querySelectorAll('.message--processing');
+                processingMessages.forEach(msg => msg.remove());
+            }
+
+            // Focus input on load
+            messageInput.focus();
+
+            // Reset inactivity timer on page load
+            resetInactivityTimer();
+
+            // Reset inactivity timer on mouse movement and keyboard activity
+            document.addEventListener('mousemove', resetInactivityTimer);
+            document.addEventListener('keypress', resetInactivityTimer);
+            document.addEventListener('touchstart', resetInactivityTimer);
+        })();
+    </script>
+</body>
+</html>
