@@ -10,5 +10,5 @@ EMBED_INSTRUCTIONS.md
 
 **/cert.pem
 **/key.pem
-**/tls.cert
+**/tls.crt
 **/tls.key
