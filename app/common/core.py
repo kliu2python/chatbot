@@ -63,8 +63,44 @@ client = chromadb.PersistentClient(path=DB_DIR)
 collection = client.get_or_create_collection(
     name=COLLECTION, metadata={"hnsw:space": "cosine"}
 )
-embedder = SentenceTransformer(EMBED_MODEL)
-reranker = CrossEncoder(RERANK_MODEL)
+# Lazy-loaded global models. They are instantiated on first use so that
+# startup/import of the worker does not immediately try to download large
+# HuggingFace assets (which can exceed the RQ worker timeout in restricted
+# environments).
+embedder_lock = threading.Lock()
+reranker_lock = threading.Lock()
+embedder: Optional[SentenceTransformer] = None
+reranker: Optional[CrossEncoder] = None
+
+
+def get_embedder() -> Optional[SentenceTransformer]:
+    global embedder
+    if embedder is not None:
+        return embedder
+    with embedder_lock:
+        if embedder is not None:
+            return embedder
+        try:
+            embedder = SentenceTransformer(EMBED_MODEL)
+        except Exception as exc:  # pragma: no cover - network/runtime failures
+            logging.warning("Unable to load embed model '%s': %s", EMBED_MODEL, exc)
+            embedder = None
+        return embedder
+
+
+def get_reranker() -> Optional[CrossEncoder]:
+    global reranker
+    if reranker is not None:
+        return reranker
+    with reranker_lock:
+        if reranker is not None:
+            return reranker
+        try:
+            reranker = CrossEncoder(RERANK_MODEL)
+        except Exception as exc:  # pragma: no cover - network/runtime failures
+            logging.warning("Unable to load rerank model '%s': %s", RERANK_MODEL, exc)
+            reranker = None
+        return reranker
 
 try:
     duckduckgo_tool: Optional[DuckDuckGoSearchResults] = DuckDuckGoSearchResults(
@@ -86,9 +122,17 @@ class RetrievalState(TypedDict, total=False):
 
 
 def embed(texts: List[str]) -> List[List[float]]:
-    return embedder.encode(
-        texts, show_progress_bar=False, normalize_embeddings=True
-    ).tolist()
+    model = get_embedder()
+    if model is None:
+        logging.warning("Embedding model unavailable; skipping embedding.")
+        return []
+    try:
+        return model.encode(
+            texts, show_progress_bar=False, normalize_embeddings=True
+        ).tolist()
+    except Exception as exc:  # pragma: no cover - model inference failure
+        logging.warning("Embedding failed: %s", exc)
+        return []
 
 
 def build_prompt(question: str, contexts: List[Dict[str, Any]]) -> str:
@@ -171,7 +215,11 @@ def chroma_retrieve_node(state: RetrievalState) -> RetrievalState:
 
     top_k = state.get("top_k") or TOP_K_DEFAULT
     candidate_k = max(20, top_k)
-    q_emb = embed([question])[0]
+    embeddings = embed([question])
+    if not embeddings:
+        return {"retriever_results": []}
+
+    q_emb = embeddings[0]
     res = collection.query(
         query_embeddings=[q_emb],
         n_results=candidate_k,
@@ -202,8 +250,14 @@ def rerank_node(state: RetrievalState) -> RetrievalState:
         return {"reranked_results": []}
 
     pairs = [(question, r.get("document", "")) for r in results]
+    model = get_reranker()
+    if model is None:
+        logging.warning("Reranker unavailable; returning retriever order.")
+        top_k = state.get("top_k") or TOP_K_DEFAULT
+        return {"reranked_results": results[:top_k]}
+
     try:
-        scores = reranker.predict(pairs)
+        scores = model.predict(pairs)
     except Exception as exc:  # pragma: no cover - model inference failure
         logging.warning("Reranker failed: %s", exc)
         scores = [0.0 for _ in pairs]
