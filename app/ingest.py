@@ -2,12 +2,15 @@ import argparse
 import hashlib
 import os
 import re
+import time
+from itertools import chain
 from pathlib import Path
-from typing import Iterable, List, Tuple, Dict
+from typing import Dict, Iterable, Iterator, List, Tuple
 
 import chromadb
 from sentence_transformers import SentenceTransformer
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
+import httpx
 from pypdf import PdfReader
 
 # -------- Config --------
@@ -103,6 +106,79 @@ def iter_docs(data_dir: Path) -> Iterable[Tuple[str, Dict]]:
             yield chunk, meta
 
 
+def fetch_html(url: str, timeout: float = 30.0) -> str:
+    """Fetch HTML content from a URL with sensible defaults."""
+    with httpx.Client(follow_redirects=True, timeout=timeout, verify=False) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        return response.text
+
+
+HEADING_LEVELS = {f"h{i}": i for i in range(1, 7)}
+
+
+def _collect_answer_text(question_tag: Tag) -> str:
+    """Collect text that belongs to a question heading until the next heading."""
+    parts: List[str] = []
+    for sibling in question_tag.next_siblings:
+        if isinstance(sibling, Tag):
+            level = HEADING_LEVELS.get(sibling.name.lower())
+            if level and level <= HEADING_LEVELS.get(question_tag.name.lower(), 7):
+                break
+            text = sibling.get_text("\n", strip=True)
+            if text:
+                parts.append(text)
+        elif isinstance(sibling, NavigableString):
+            text = str(sibling).strip()
+            if text:
+                parts.append(text)
+    return "\n\n".join(parts).strip()
+
+
+def iter_fortinet_faq(url: str) -> Iterator[Tuple[str, Dict]]:
+    """Yield chunks derived from the Fortinet FAQ page."""
+    try:
+        html = fetch_html(url)
+    except Exception as exc:  # pragma: no cover - network may fail in some environments
+        print(f"Failed to fetch Fortinet FAQ page ({url}): {exc}")
+        return
+
+    soup = BeautifulSoup(html, "html.parser")
+    headings = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+    last_modified = time.time()
+    for heading in headings:
+        question = heading.get_text(strip=True)
+        if not question or not question.endswith("?"):
+            continue
+
+        answer = _collect_answer_text(heading)
+        if not answer:
+            continue
+
+        anchor = heading.get("id")
+        source_url = f"{url}#{anchor}" if anchor else url
+        full_text = f"{question}\n\n{answer}"
+        chunks = chunk_text(full_text)
+        total_chunks = len(chunks)
+        for idx, chunk in enumerate(chunks):
+            section_label = question
+            if total_chunks > 1:
+                section_label = f"{question} (Part {idx + 1} of {total_chunks})"
+            meta = {
+                "source": source_url,
+                "chunk": idx,
+                "total_chunks": total_chunks,
+                "filename": "fortinet_faqs",
+                "last_modified": last_modified,
+                "section_label": section_label,
+                "url": source_url,
+                "title": "FortiIdentity Cloud FAQs",
+                "question": question,
+                "source_type": "fortinet_faq",
+            }
+            yield chunk, meta
+
+
 def sha1(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
@@ -115,9 +191,12 @@ def upsert_chunks(
     batch_size: int = 128,
     reset: bool = False,
 ):
-    collection = client.get_or_create_collection(name=collection_name, metadata={"hnsw:space": "cosine"})
     if reset:
-        collection.delete()
+        try:
+            client.delete_collection(name=collection_name)
+        except Exception:
+            pass
+    collection = client.get_or_create_collection(name=collection_name, metadata={"hnsw:space": "cosine"})
     embedder = SentenceTransformer(model_name)
 
     batch_texts, batch_metas, batch_ids = [], [], []
@@ -155,14 +234,34 @@ def main():
     parser.add_argument("--collection", type=str, default="faq", help="Collection name")
     parser.add_argument("--model", type=str, default="sentence-transformers/all-MiniLM-L6-v2", help="Embedding model")
     parser.add_argument("--reset", action="store_true", help="Reset the collection before ingesting")
+    parser.add_argument(
+        "--fortinet_faq_url",
+        type=str,
+        default="https://docs.fortinet.com/document/fortiidentity-cloud/latest/admin-guide/766608/faqs",
+        help="Fetch and embed Fortinet FAQs from the given URL.",
+    )
+    parser.add_argument(
+        "--skip_fortinet_faq",
+        action="store_true",
+        help="Skip fetching the Fortinet FAQ page during ingestion.",
+    )
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
     if not data_dir.exists():
-        raise SystemExit(f"Data directory not found: {data_dir}")
+        print(f"Warning: Data directory not found: {data_dir}")
 
     client = chromadb.PersistentClient(path=args.db_dir)
-    docs = iter_docs(data_dir)
+    doc_iters: List[Iterable[Tuple[str, Dict]]] = []
+    if data_dir.exists():
+        doc_iters.append(iter_docs(data_dir))
+    if not args.skip_fortinet_faq and args.fortinet_faq_url:
+        doc_iters.append(iter_fortinet_faq(args.fortinet_faq_url))
+
+    if not doc_iters:
+        raise SystemExit("No documents available for ingestion.")
+
+    docs = chain.from_iterable(doc_iters)
 
     upsert_chunks(client, args.collection, docs, model_name=args.model, reset=args.reset)
     print(f"Ingest complete. DB path: {args.db_dir}, collection: {args.collection}")
