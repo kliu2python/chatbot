@@ -14,3 +14,4 @@ duckduckgo-search
 watchdog
 redis
 rq
+httpx
